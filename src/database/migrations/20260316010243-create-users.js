@@ -23,6 +23,15 @@ module.exports = {
             type: Sequelize.STRING,
             allowNull: false,
          },
+         role: {
+            type: Sequelize.STRING(20),
+            allowNull: false,
+            defaultValue: 'user',
+         },
+         refresh_token: {
+            type: Sequelize.STRING,
+            allowNull: true,
+         },
          created_at: {
             allowNull: false,
             type: Sequelize.DATE,

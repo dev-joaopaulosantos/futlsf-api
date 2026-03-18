@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       {
          name: { type: DataTypes.STRING, allowNull: false },
          logoUrl: DataTypes.STRING,
-         userId: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'users', key: 'id' } },
+         userId: { type: DataTypes.INTEGER, allowNull: false },
       },
       { sequelize, modelName: 'Team', tableName: 'teams', underscored: true },
    );
