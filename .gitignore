@@ -1,0 +1,4 @@
+/.env
+/.prettierrc
+/.sequelizerc
+/node_modules
