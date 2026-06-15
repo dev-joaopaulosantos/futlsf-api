@@ -40,6 +40,9 @@ const refreshLimiter = rateLimit({
 
 // POST /auth/login  → valida credenciais e abre a sessão (pública, com limite).
 router.post('/login', loginLimiter, AuthController.login);
+// POST /auth/google → login/cadastro via conta Google (pública). Reutiliza o
+// loginLimiter porque é outro ponto de entrada de sessão (mesma proteção).
+router.post('/google', loginLimiter, AuthController.googleLogin);
 // POST /auth/refresh → renova o access token via cookie (pública, sem authMiddleware:
 // a identidade é provada pelo próprio refresh token).
 router.post('/refresh', refreshLimiter, AuthController.refresh);

@@ -24,7 +24,10 @@ module.exports = (sequelize, DataTypes) => {
       {
          name: { type: DataTypes.STRING, allowNull: false },
          email: { type: DataTypes.STRING, allowNull: false, unique: true },
-         password: { type: DataTypes.STRING, allowNull: false },
+         // Nulo para quem entra só via Google (a senha vive na conta Google, não aqui)
+         password: { type: DataTypes.STRING, allowNull: true },
+         // ID da conta Google (campo `sub` do token). Nulo para contas de e-mail/senha.
+         googleId: { type: DataTypes.STRING, allowNull: true, unique: true },
          refreshToken: { type: DataTypes.STRING, allowNull: true },
          role: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'user' },
          // Lista de chaves de permissão (apenas relevante para admins). Ver src/constants/permissions.js

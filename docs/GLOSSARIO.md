@@ -101,5 +101,11 @@ Transformar a senha numa sequência embaralhada e irreversível antes de guardar
 **Cookie httpOnly**
 Um cookie que o JavaScript da página **não consegue ler** — só o navegador o envia automaticamente para a API. Guardamos o refresh token assim para protegê-lo de ataques.
 
+**OAuth / Login com Google**
+Forma de entrar usando uma conta de outro serviço (aqui, o Google) sem criar senha no nosso sistema. O Google só **confirma quem é a pessoa**.
+
+**ID token (Google)**
+Um JWT que o Google gera no navegador quando o usuário escolhe a conta. O frontend o envia para `POST /auth/google`; o backend o valida com o Google e, se for legítimo, emite os **nossos** tokens (access + refresh). O token do Google é descartado depois disso — a sessão continua sendo a nossa. Detalhes em [`../AUTH_DOCS.md`](../AUTH_DOCS.md).
+
 ---
 > 💡 Faltou algum termo? Vale adicionar aqui — o glossário é vivo.

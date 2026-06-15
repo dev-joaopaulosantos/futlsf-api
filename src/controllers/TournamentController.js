@@ -21,6 +21,12 @@ const deleteTournamentCascade = require('../services/deleteTournamentCascade');
 const { canManageTournament } = require('../services/canManageTournament');
 const { TOURNAMENT_STATUSES } = require('../constants/enums');
 const asyncHandler = require('../middleware/asyncHandler');
+const supabase = require('../lib/supabase');
+
+// Configurações do upload de logo para o Supabase Storage.
+const LOGO_BUCKET = 'tournament-logos';
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
 // "Includes" de exibição reutilizados em findAll/findById. No Sequelize, um
 // `include` faz um JOIN: além do campeonato, já traz os dados relacionados
@@ -330,5 +336,45 @@ module.exports = {
       });
 
       return res.status(200).json({ data: teams });
+   }),
+
+   /**
+    * POST /tournaments/upload-url — gera URL assinada para upload da logo.
+    *
+    * Mesmo padrão do `TeamController.getUploadUrl` (ver lá a explicação do
+    * "upload direto"). O arquivo vai para o bucket `tournament-logos` no
+    * Supabase Storage. Precisa ser criado no painel do Supabase como bucket
+    * PÚBLICO (para que a `publicUrl` seja acessível sem autenticação).
+    */
+   getUploadUrl: asyncHandler(async (req, res) => {
+      const { fileName, contentType, fileSize } = req.body;
+
+      if (!fileName || !contentType) {
+         return res.status(400).json({ error: 'fileName e contentType são obrigatórios.' });
+      }
+
+      if (!ALLOWED_TYPES.includes(contentType)) {
+         return res.status(400).json({ error: 'Formato não permitido. Use JPG, PNG, WebP ou SVG.' });
+      }
+
+      if (fileSize && fileSize > MAX_SIZE_BYTES) {
+         return res.status(400).json({ error: 'Arquivo muito grande. Máximo: 2 MB.' });
+      }
+
+      const ext = fileName.split('.').pop();
+      const path = `${req.userId}/${Date.now()}.${ext}`;
+
+      const { data, error } = await supabase.storage
+         .from(LOGO_BUCKET)
+         .createSignedUploadUrl(path);
+
+      if (error) {
+         console.error('[getUploadUrl tournament] Supabase error:', error);
+         return res.status(500).json({ error: 'Erro ao gerar URL de upload.', detail: error.message });
+      }
+
+      const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${LOGO_BUCKET}/${path}`;
+
+      return res.status(200).json({ signedUrl: data.signedUrl, token: data.token, path, publicUrl });
    }),
 };

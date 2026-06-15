@@ -21,6 +21,7 @@ const authMiddleware = require('../middleware/auth');
 
 const TournamentController = require('../controllers/TournamentController');
 
+router.post('/upload-url', authMiddleware, TournamentController.getUploadUrl);
 router.post('/', authMiddleware, TournamentController.create);
 router.get('/', TournamentController.findAll);
 router.get('/:id', TournamentController.findById);

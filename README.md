@@ -27,6 +27,7 @@ npm install
 cp .env.example .env
 #   edite o .env: dados do MySQL e gere os segredos JWT
 #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+#   (opcional) GOOGLE_CLIENT_ID para o login com Google — ver seção abaixo
 
 # 3. Criar o banco (se ainda não existir) com o nome de DB_NAME
 
@@ -47,6 +48,21 @@ A API sobe em `http://localhost:<PORT>` (padrão `3001`). Teste: `GET /` → `{ 
 
 ### Usuário inicial (seed)
 O seeder cria o **proprietário do sistema** (super-admin). Credenciais padrão: veja `src/database/seeders/` — troque a senha após o primeiro login.
+
+### Login com Google (opcional)
+Para habilitar o botão "Entrar com Google":
+1. No [Google Cloud Console](https://console.cloud.google.com/): crie um projeto.
+2. **APIs e Serviços → Tela de consentimento OAuth** (tipo "External"); adicione os
+   escopos **não confidenciais** `email`, `profile`, `openid`.
+3. **APIs e Serviços → Credenciais → Criar credencial → ID do cliente OAuth** →
+   tipo **Aplicativo da Web**. Em *Origens JavaScript autorizadas*, adicione
+   `http://localhost:3000` (e o domínio de produção).
+4. Copie o **Client ID** gerado para:
+   - backend: `GOOGLE_CLIENT_ID` no `.env`;
+   - frontend: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` no `.env.local` (mesmo valor).
+
+Sem essa variável, o login por e-mail/senha continua funcionando normalmente; só o
+botão do Google não aparece. Não é necessário Client Secret nesta abordagem.
 
 ## Scripts (`package.json`)
 | Script | Ação |

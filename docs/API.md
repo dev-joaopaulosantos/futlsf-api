@@ -20,6 +20,7 @@ Cada endpoint tem:
 
 ## Autenticação
 - Faça `POST /auth/login` e use o `accessToken` retornado no header `Authorization: Bearer <accessToken>` nas rotas 🔒/🛡️.
+- Alternativa: `POST /auth/google` (login/cadastro com conta Google) — devolve o mesmo formato de resposta do login e abre a sessão igual.
 - O **refresh token** vai num **cookie httpOnly** (`credentials: 'include'`/`withCredentials`). Quando o access token expira (5h), chame `POST /auth/refresh` para obter um novo (há rotação do refresh).
 - Erros de auth: `401` (token ausente/inválido/expirado), `403` (sem permissão ou conta desativada).
 
@@ -33,6 +34,7 @@ Cada endpoint tem:
 | Rota | Limite |
 |---|---|
 | `POST /auth/login` | 10 falhas / 15 min por IP |
+| `POST /auth/google` | 10 falhas / 15 min por IP |
 | `POST /auth/refresh` | 60 / 15 min por IP |
 | `POST /users/register` | 20 / 1 h por IP |
 
@@ -70,6 +72,12 @@ Resposta `200`:
   "data": { "user": { "id": 1, "name": "...", "email": "...", "role": "admin", "permissions": [], "isActive": true, "isSuperAdmin": true }, "accessToken": "eyJ..." } }
 ```
 Erros: `400` campos faltando · `401` credenciais inválidas · `403` conta desativada.
+
+### POST /auth/google 🔓
+Login/cadastro com conta Google. Body: `{ "credential": "<ID token do Google>" }` (o frontend obtém esse token pelo botão do Google).
+O backend valida o token com o Google e então: usa o usuário já vinculado por `googleId`; ou, se o e-mail já existir, **vincula** a conta Google a ele; ou cria um organizador novo (`role: 'user'`, sem senha).
+Resposta `200`: mesmo formato do `/auth/login` (`{ message, data: { user, accessToken } }`).
+Erros: `400` `credential` ausente · `401` token inválido ou e-mail não verificado · `403` conta desativada.
 
 ### POST /auth/refresh 🔓 (usa cookie)
 Sem body; envia o cookie `refreshToken`. Resposta `200`: `{ "message": "...", "data": { "accessToken": "eyJ...", "user": {...} } }`. Erros: `401` ausente/inválido/revogado · `403` desativada.

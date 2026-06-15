@@ -46,6 +46,7 @@ components:
           items: { type: string, enum: [manage_organizers, manage_tournaments, manage_admins, view_all] }
         isActive: { type: boolean }
         isSuperAdmin: { type: boolean }
+        googleId: { type: string, nullable: true, description: ID da conta Google vinculada (nulo se cadastro por senha) }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     TeamRef:
@@ -145,6 +146,9 @@ components:
         SG: { type: integer, description: Saldo de gols }
 
   responses:
+    BadRequest:
+      description: Requisição inválida (campos faltando ou inválidos)
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
     NotFound:
       description: Recurso não encontrado
       content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
@@ -184,6 +188,39 @@ paths:
                     properties:
                       user: { $ref: '#/components/schemas/User' }
                       accessToken: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Login/cadastro com conta Google
+      description: >
+        Recebe o ID token do Google (campo `credential`). Valida o token, então
+        usa o usuário vinculado por googleId, vincula a uma conta existente de
+        mesmo e-mail, ou cria um organizador novo (role 'user', sem senha).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [credential]
+              properties:
+                credential: { type: string, description: ID token gerado pelo Google no frontend }
+      responses:
+        '200':
+          description: OK (Set-Cookie refreshToken httpOnly)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      user: { $ref: '#/components/schemas/User' }
+                      accessToken: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /auth/refresh:
     post:

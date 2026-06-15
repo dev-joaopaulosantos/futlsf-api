@@ -29,7 +29,11 @@ Em vez de um único token de vida longa (perigoso se vazar), a responsabilidade 
 
 ## ⚙️ 2. No backend (Express + Sequelize)
 
-Três rotas: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` (ver `src/controllers/AuthController.js`).
+Rotas: `POST /auth/login`, `POST /auth/google`, `POST /auth/refresh`, `POST /auth/logout` (ver `src/controllers/AuthController.js`).
+
+> A emissão dos tokens é centralizada no helper `issueSession(user, res)`: gera o
+> par de tokens, salva o refresh no banco, seta o cookie httpOnly e devolve
+> `{ user, accessToken }`. `login`, `googleLogin` e `refresh` usam esse helper.
 
 ### A. Login (`POST /auth/login`)
 Com e-mail e senha válidos (e conta ativa):
@@ -37,6 +41,24 @@ Com e-mail e senha válidos (e conta ativa):
 2. Gera o **Refresh Token** (`REFRESH_TOKEN_SECRET`, 7d) e **salva no banco** (`user.refreshToken`).
 3. Envia o **Refresh Token num cookie httpOnly** (`Set-Cookie`).
 4. Retorna no corpo: `{ data: { user, accessToken } }` (sem `password`/`refreshToken`).
+
+> Contas que entram só pelo Google têm `password` nulo: o login por senha as
+> rejeita com `401` (mensagem genérica), sem chegar ao `bcrypt.compare`.
+
+### A.2. Login com Google (`POST /auth/google`)
+O frontend usa o botão do Google (`@react-oauth/google`) para obter um **ID token**
+e o envia no corpo como `{ credential }`. O backend então:
+1. **Valida** o ID token com a `google-auth-library` (assinatura do Google +
+   `audience` = nosso `GOOGLE_CLIENT_ID`). Token inválido → `401`.
+2. Exige `email_verified` do Google (senão `401`).
+3. **Encontra ou cria** o usuário: por `googleId`; ou, se já existe conta com o
+   mesmo e-mail, **vincula** o `googleId` a ela; ou cria um organizador novo
+   (`role: 'user'`, sem senha).
+4. Emite a sessão via `issueSession` — resposta igual à do login normal.
+
+Estratégia escolhida: **ID token** (stateless), não o fluxo de redirecionamento do
+passport — encaixa no modelo de access token em memória + refresh em cookie. Só
+precisa do `GOOGLE_CLIENT_ID` (público), sem Client Secret.
 
 ### B. Atualização silenciosa (`POST /auth/refresh`)
 O cliente chama **sem corpo** — o refresh token vai automaticamente no cookie:
