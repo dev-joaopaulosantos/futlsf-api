@@ -1,0 +1,124 @@
+{
+  "info": {
+    "name": "Fut Lagoense API",
+    "description": "Coleção da API Fut Lagoense. Defina as variáveis baseUrl e accessToken (o request de Login preenche accessToken automaticamente).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "accessToken", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.data && d.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', d.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@futlsf.com\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tournaments",
+      "item": [
+        { "name": "List (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/tournaments", "host": ["{{baseUrl}}"], "path": ["tournaments"] } } },
+        { "name": "Get by id (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/tournaments/1", "host": ["{{baseUrl}}"], "path": ["tournaments", "1"] } } },
+        { "name": "Teams do campeonato (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/tournaments/1/teams", "host": ["{{baseUrl}}"], "path": ["tournaments", "1", "teams"] } } },
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Copa Exemplo\"\n}" }, "url": { "raw": "{{baseUrl}}/tournaments", "host": ["{{baseUrl}}"], "path": ["tournaments"] } } },
+        { "name": "Update", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"status\": \"ONGOING\"\n}" }, "url": { "raw": "{{baseUrl}}/tournaments/1", "host": ["{{baseUrl}}"], "path": ["tournaments", "1"] } } },
+        { "name": "Delete", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/tournaments/1", "host": ["{{baseUrl}}"], "path": ["tournaments", "1"] } } },
+        { "name": "Add team", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"teamId\": 1,\n  \"groupId\": null\n}" }, "url": { "raw": "{{baseUrl}}/tournaments/1/teams", "host": ["{{baseUrl}}"], "path": ["tournaments", "1", "teams"] } } },
+        { "name": "Assign team to group", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"groupId\": 1\n}" }, "url": { "raw": "{{baseUrl}}/tournaments/1/teams/1/group", "host": ["{{baseUrl}}"], "path": ["tournaments", "1", "teams", "1", "group"] } } }
+      ]
+    },
+    {
+      "name": "Teams",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/teams", "host": ["{{baseUrl}}"], "path": ["teams"] } } },
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Time Exemplo\"\n}" }, "url": { "raw": "{{baseUrl}}/teams", "host": ["{{baseUrl}}"], "path": ["teams"] } } },
+        { "name": "Update", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Novo nome\"\n}" }, "url": { "raw": "{{baseUrl}}/teams/1", "host": ["{{baseUrl}}"], "path": ["teams", "1"] } } },
+        { "name": "Delete", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/teams/1", "host": ["{{baseUrl}}"], "path": ["teams", "1"] } } }
+      ]
+    },
+    {
+      "name": "Phases",
+      "item": [
+        { "name": "List by tournament (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/phases?tournamentId=1", "host": ["{{baseUrl}}"], "path": ["phases"], "query": [{ "key": "tournamentId", "value": "1" }] } } },
+        { "name": "Get by id (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/phases/1", "host": ["{{baseUrl}}"], "path": ["phases", "1"] } } },
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"tournamentId\": 1,\n  \"name\": \"Fase de Grupos\",\n  \"type\": \"LEAGUE\",\n  \"order\": 1\n}" }, "url": { "raw": "{{baseUrl}}/phases", "host": ["{{baseUrl}}"], "path": ["phases"] } } },
+        { "name": "Update", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Semifinal\"\n}" }, "url": { "raw": "{{baseUrl}}/phases/1", "host": ["{{baseUrl}}"], "path": ["phases", "1"] } } },
+        { "name": "Delete", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/phases/1", "host": ["{{baseUrl}}"], "path": ["phases", "1"] } } }
+      ]
+    },
+    {
+      "name": "Groups",
+      "item": [
+        { "name": "List by phase (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/groups?phaseId=1", "host": ["{{baseUrl}}"], "path": ["groups"], "query": [{ "key": "phaseId", "value": "1" }] } } },
+        { "name": "Get by id (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/groups/1", "host": ["{{baseUrl}}"], "path": ["groups", "1"] } } },
+        { "name": "Standings (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/groups/1/standings", "host": ["{{baseUrl}}"], "path": ["groups", "1", "standings"] } } },
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"phaseId\": 1,\n  \"name\": \"Grupo A\"\n}" }, "url": { "raw": "{{baseUrl}}/groups", "host": ["{{baseUrl}}"], "path": ["groups"] } } },
+        { "name": "Update", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Grupo B\"\n}" }, "url": { "raw": "{{baseUrl}}/groups/1", "host": ["{{baseUrl}}"], "path": ["groups", "1"] } } },
+        { "name": "Delete", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/groups/1", "host": ["{{baseUrl}}"], "path": ["groups", "1"] } } }
+      ]
+    },
+    {
+      "name": "Matches",
+      "item": [
+        { "name": "List (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/matches?groupId=1", "host": ["{{baseUrl}}"], "path": ["matches"], "query": [{ "key": "groupId", "value": "1" }] } } },
+        { "name": "Get by id (público)", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": { "raw": "{{baseUrl}}/matches/1", "host": ["{{baseUrl}}"], "path": ["matches", "1"] } } },
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"phaseId\": 1,\n  \"groupId\": 1,\n  \"homeTeamId\": 1,\n  \"awayTeamId\": 2,\n  \"leg\": \"SINGLE\"\n}" }, "url": { "raw": "{{baseUrl}}/matches", "host": ["{{baseUrl}}"], "path": ["matches"] } } },
+        { "name": "Update (placar)", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"homeScore\": 2,\n  \"awayScore\": 1,\n  \"status\": \"FINISHED\"\n}" }, "url": { "raw": "{{baseUrl}}/matches/1", "host": ["{{baseUrl}}"], "path": ["matches", "1"] } } },
+        { "name": "Delete", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/matches/1", "host": ["{{baseUrl}}"], "path": ["matches", "1"] } } }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        { "name": "Register (público)", "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Organizador\",\n  \"email\": \"org@exemplo.com\",\n  \"password\": \"senha123\"\n}" }, "url": { "raw": "{{baseUrl}}/users/register", "host": ["{{baseUrl}}"], "path": ["users", "register"] } } },
+        { "name": "List", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] } } },
+        { "name": "Permissions catalog", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/users/permissions", "host": ["{{baseUrl}}"], "path": ["users", "permissions"] } } },
+        { "name": "Create (admin)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Novo Admin\",\n  \"email\": \"admin2@exemplo.com\",\n  \"password\": \"senha123\",\n  \"role\": \"admin\",\n  \"permissions\": [\"manage_tournaments\"]\n}" }, "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] } } },
+        { "name": "Update", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Nome Atualizado\"\n}" }, "url": { "raw": "{{baseUrl}}/users/2", "host": ["{{baseUrl}}"], "path": ["users", "2"] } } },
+        { "name": "Delete", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/users/2", "host": ["{{baseUrl}}"], "path": ["users", "2"] } } }
+      ]
+    }
+  ]
+}

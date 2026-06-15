@@ -1,0 +1,704 @@
+openapi: 3.1.0
+info:
+  title: Fut Lagoense API
+  version: 1.0.0
+  description: >
+    API REST do sistema de campeonatos Fut Lagoense.
+    Endpoints de leitura (GET de tournaments/phases/groups/matches) são públicos
+    e destinados também ao app mobile. Demais operações exigem Bearer access token.
+servers:
+  - url: http://localhost:3001
+    description: Desenvolvimento
+
+tags:
+  - name: Auth
+  - name: Tournaments
+  - name: Teams
+  - name: Phases
+  - name: Groups
+  - name: Matches
+  - name: Users
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+    Message:
+      type: object
+      properties:
+        message: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [user, admin] }
+        permissions:
+          type: array
+          items: { type: string, enum: [manage_organizers, manage_tournaments, manage_admins, view_all] }
+        isActive: { type: boolean }
+        isSuperAdmin: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TeamRef:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        logoUrl: { type: string, nullable: true }
+    Team:
+      allOf:
+        - $ref: '#/components/schemas/TeamRef'
+        - type: object
+          properties:
+            userId: { type: integer }
+            groupId: { type: integer, nullable: true }
+    Tournament:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        logoUrl: { type: string, nullable: true }
+        userId: { type: integer }
+        organizerName: { type: string, nullable: true }
+        status: { type: string, enum: [NOT_STARTED, ONGOING, FINISHED, CANCELLED] }
+        organizer:
+          type: object
+          nullable: true
+          properties:
+            id: { type: integer }
+            name: { type: string }
+        champion: { $ref: '#/components/schemas/TeamRef' }
+        runnerUp: { $ref: '#/components/schemas/TeamRef' }
+        thirdPlace: { $ref: '#/components/schemas/TeamRef' }
+        topScorerName: { type: string, nullable: true }
+        bestPlayerName: { type: string, nullable: true }
+        bestGoalkeeperName: { type: string, nullable: true }
+        awards:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              title: { type: string }
+              prize: { type: string }
+        teams:
+          type: array
+          items: { $ref: '#/components/schemas/TeamRef' }
+    Phase:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        type: { type: string, enum: [LEAGUE, KNOCKOUT] }
+        order: { type: integer }
+        tournamentId: { type: integer }
+    Group:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        phaseId: { type: integer }
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              teamId: { type: integer }
+              groupId: { type: integer, nullable: true }
+              team: { $ref: '#/components/schemas/TeamRef' }
+    Match:
+      type: object
+      properties:
+        id: { type: integer }
+        homeScore: { type: integer, nullable: true }
+        awayScore: { type: integer, nullable: true }
+        status: { type: string, enum: [SCHEDULED, FINISHED] }
+        leg: { type: string, enum: [SINGLE, FIRST_LEG, SECOND_LEG] }
+        matchDate: { type: string, format: date-time, nullable: true }
+        phaseId: { type: integer }
+        groupId: { type: integer, nullable: true }
+        homeTeamId: { type: integer }
+        awayTeamId: { type: integer }
+        home_team: { $ref: '#/components/schemas/TeamRef' }
+        away_team: { $ref: '#/components/schemas/TeamRef' }
+    Standing:
+      type: object
+      properties:
+        team: { $ref: '#/components/schemas/TeamRef' }
+        P: { type: integer, description: Pontos }
+        J: { type: integer, description: Jogos }
+        V: { type: integer, description: Vitórias }
+        E: { type: integer, description: Empates }
+        D: { type: integer, description: Derrotas }
+        GP: { type: integer, description: Gols pró }
+        GC: { type: integer, description: Gols contra }
+        SG: { type: integer, description: Saldo de gols }
+
+  responses:
+    NotFound:
+      description: Recurso não encontrado
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: Token ausente/inválido
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Sem permissão
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: OK (Set-Cookie refreshToken httpOnly)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      user: { $ref: '#/components/schemas/User' }
+                      accessToken: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renova o access token (usa cookie refreshToken)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      accessToken: { type: string }
+                      user: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (revoga refresh token)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Message' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /tournaments:
+    get:
+      tags: [Tournaments]
+      summary: Lista campeonatos (público)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Tournament' } }
+    post:
+      tags: [Tournaments]
+      summary: Cria campeonato
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                logoUrl: { type: string }
+                organizerName: { type: string }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object, properties: { message: { type: string }, data: { $ref: '#/components/schemas/Tournament' } } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /tournaments/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Tournaments]
+      summary: Detalhe do campeonato (público)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Tournament' } } } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Tournaments]
+      summary: Atualiza campeonato (dono ou manage_tournaments)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                logoUrl: { type: string }
+                organizerName: { type: string }
+                status: { type: string, enum: [NOT_STARTED, ONGOING, FINISHED, CANCELLED] }
+                championId: { type: integer, nullable: true }
+                runnerUpId: { type: integer, nullable: true }
+                thirdPlaceId: { type: integer, nullable: true }
+                topScorerName: { type: string }
+                topScorerTeamId: { type: integer, nullable: true }
+                bestPlayerName: { type: string }
+                bestPlayerTeamId: { type: integer, nullable: true }
+                bestGoalkeeperName: { type: string }
+                bestGoalkeeperTeamId: { type: integer, nullable: true }
+                awards:
+                  type: array
+                  items: { type: object, properties: { title: { type: string }, prize: { type: string } } }
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Tournaments]
+      summary: Exclui campeonato em cascata (dono ou manage_tournaments)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /tournaments/{tournamentId}/teams:
+    parameters:
+      - { name: tournamentId, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Tournaments]
+      summary: Times do campeonato (público)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Team' } } } } } } }
+    post:
+      tags: [Tournaments]
+      summary: Adiciona time ao campeonato
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [teamId], properties: { teamId: { type: integer }, groupId: { type: integer, nullable: true } } }
+      responses:
+        '201': { description: Criado }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Já associado }
+  /tournaments/{tournamentId}/teams/{teamId}:
+    parameters:
+      - { name: tournamentId, in: path, required: true, schema: { type: integer } }
+      - { name: teamId, in: path, required: true, schema: { type: integer } }
+    delete:
+      tags: [Tournaments]
+      summary: Remove time do campeonato
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /tournaments/{tournamentId}/teams/{teamId}/group:
+    parameters:
+      - { name: tournamentId, in: path, required: true, schema: { type: integer } }
+      - { name: teamId, in: path, required: true, schema: { type: integer } }
+    put:
+      tags: [Tournaments]
+      summary: Aloca o time em um grupo (ou null)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { groupId: { type: integer, nullable: true } } }
+      responses:
+        '200': { description: OK }
+        '400': { description: Grupo não pertence ao campeonato }
+
+  /teams:
+    get:
+      tags: [Teams]
+      summary: Lista times do usuário (ou ?ownerId= para admins)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: ownerId, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Team' } } } } } } }
+    post:
+      tags: [Teams]
+      summary: Cria time
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name], properties: { name: { type: string }, logoUrl: { type: string } } }
+      responses:
+        '201': { description: Criado }
+  /teams/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Teams]
+      summary: Detalhe do time
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Teams]
+      summary: Atualiza time (dono ou manage_tournaments)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { name: { type: string }, logoUrl: { type: string } } }
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Teams]
+      summary: Exclui time (dono ou manage_tournaments)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /teams/{teamId}/tournaments:
+    parameters:
+      - { name: teamId, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Teams]
+      summary: Campeonatos do time
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Teams]
+      summary: Associa time a um campeonato
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [tournamentId], properties: { tournamentId: { type: integer }, groupId: { type: integer, nullable: true } } }
+      responses:
+        '201': { description: Criado }
+        '409': { description: Já associado }
+  /teams/{teamId}/tournaments/{tournamentId}:
+    parameters:
+      - { name: teamId, in: path, required: true, schema: { type: integer } }
+      - { name: tournamentId, in: path, required: true, schema: { type: integer } }
+    delete:
+      tags: [Teams]
+      summary: Desassocia time de um campeonato
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+
+  /phases:
+    get:
+      tags: [Phases]
+      summary: Lista fases (público)
+      parameters:
+        - { name: tournamentId, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Phase' } } } } } } }
+    post:
+      tags: [Phases]
+      summary: Cria fase
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tournamentId, name, type]
+              properties:
+                tournamentId: { type: integer }
+                name: { type: string }
+                type: { type: string, enum: [LEAGUE, KNOCKOUT] }
+                order: { type: integer }
+      responses:
+        '201': { description: Criado }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /phases/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Phases]
+      summary: Detalhe da fase com grupos e partidas (público)
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Phases]
+      summary: Atualiza fase
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { name: { type: string }, type: { type: string, enum: [LEAGUE, KNOCKOUT] }, order: { type: integer } } }
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Phases]
+      summary: Exclui fase
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /groups:
+    get:
+      tags: [Groups]
+      summary: Lista grupos (público)
+      parameters:
+        - { name: phaseId, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Group' } } } } } } }
+    post:
+      tags: [Groups]
+      summary: Cria grupo (fase precisa ser LEAGUE)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [phaseId, name], properties: { phaseId: { type: integer }, name: { type: string } } }
+      responses:
+        '201': { description: Criado }
+        '422': { description: Fase não é LEAGUE }
+  /groups/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Groups]
+      summary: Detalhe do grupo (público)
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Groups]
+      summary: Atualiza grupo
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content: { application/json: { schema: { type: object, required: [name], properties: { name: { type: string } } } } }
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Groups]
+      summary: Exclui grupo
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /groups/{id}/standings:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Groups]
+      summary: Classificação do grupo (público)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Standing' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /matches:
+    get:
+      tags: [Matches]
+      summary: Lista partidas (público)
+      parameters:
+        - { name: phaseId, in: query, required: false, schema: { type: integer } }
+        - { name: groupId, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Match' } } } } } } }
+    post:
+      tags: [Matches]
+      summary: Cria partida
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phaseId, homeTeamId, awayTeamId]
+              properties:
+                phaseId: { type: integer }
+                groupId: { type: integer, nullable: true }
+                homeTeamId: { type: integer }
+                awayTeamId: { type: integer }
+                matchDate: { type: string, format: date }
+                status: { type: string, enum: [SCHEDULED, FINISHED] }
+                homeScore: { type: integer, nullable: true }
+                awayScore: { type: integer, nullable: true }
+                leg: { type: string, enum: [SINGLE, FIRST_LEG, SECOND_LEG] }
+      responses:
+        '201': { description: Criado }
+        '400': { description: Validação }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /matches/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Matches]
+      summary: Detalhe da partida (público)
+      responses:
+        '200': { description: OK }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Matches]
+      summary: Atualiza partida (placar/status/data/leg)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                homeScore: { type: integer, nullable: true }
+                awayScore: { type: integer, nullable: true }
+                status: { type: string, enum: [SCHEDULED, FINISHED] }
+                matchDate: { type: string, format: date }
+                groupId: { type: integer, nullable: true }
+                leg: { type: string, enum: [SINGLE, FIRST_LEG, SECOND_LEG] }
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Matches]
+      summary: Exclui partida
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /users/register:
+    post:
+      tags: [Users]
+      summary: Auto-cadastro público (cria sempre role user)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name, email, password], properties: { name: { type: string }, email: { type: string, format: email }, password: { type: string } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { type: object, properties: { message: { type: string }, data: { $ref: '#/components/schemas/User' } } } } } }
+        '409': { description: E-mail em uso }
+  /users:
+    get:
+      tags: [Users]
+      summary: Lista usuários (view_all | manage_organizers | manage_admins)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/User' } } } } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Users]
+      summary: Cria usuário/admin (manage_admins)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string }
+                role: { type: string, enum: [user, admin] }
+                permissions: { type: array, items: { type: string } }
+      responses:
+        '201': { description: Criado }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: E-mail em uso }
+  /users/permissions:
+    get:
+      tags: [Users]
+      summary: Catálogo de permissões (manage_admins)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { type: string } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /users/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Users]
+      summary: Detalhe do usuário (próprio ou admin autorizado)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Users]
+      summary: Atualiza usuário (próprio ou admin)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string }
+                role: { type: string, enum: [user, admin] }
+                permissions: { type: array, items: { type: string } }
+                isActive: { type: boolean }
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Users]
+      summary: Exclui usuário (próprio ou manage_organizers)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Forbidden' }

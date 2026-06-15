@@ -1,6 +1,11 @@
 'use strict';
 const { Model } = require('sequelize');
 
+/*
+ * Model Group — representa a tabela `groups` (os grupos de uma fase, ex.:
+ * "Grupo A"). Pertence a uma fase, reúne vários times (via TournamentTeam) e
+ * tem várias partidas.
+ */
 module.exports = (sequelize, DataTypes) => {
    class Group extends Model {
       static associate(models) {

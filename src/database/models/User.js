@@ -1,6 +1,18 @@
 'use strict';
 const { Model } = require('sequelize');
 
+/*
+ * Model User — representa a tabela `users`.
+ *
+ * Cada model exporta uma função que recebe `sequelize` e `DataTypes` e devolve a
+ * classe. Dois pontos para entender o padrão:
+ * - `static associate(models)`: declara os relacionamentos com outras tabelas;
+ *   é chamado pelo index.js depois de todos os models carregarem.
+ * - `User.init({...campos...}, {...opções...})`: define as colunas e suas regras
+ *   (tipo, obrigatório, valor padrão, único...). `underscored: true` faz o
+ *   Sequelize converter os nomes camelCase do JS (ex.: isActive) para snake_case
+ *   no banco (ex.: is_active).
+ */
 module.exports = (sequelize, DataTypes) => {
    class User extends Model {
       static associate(models) {
@@ -15,6 +27,12 @@ module.exports = (sequelize, DataTypes) => {
          password: { type: DataTypes.STRING, allowNull: false },
          refreshToken: { type: DataTypes.STRING, allowNull: true },
          role: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'user' },
+         // Lista de chaves de permissão (apenas relevante para admins). Ver src/constants/permissions.js
+         permissions: { type: DataTypes.JSON, allowNull: false, defaultValue: [] },
+         // Conta desativada não consegue logar nem renovar token
+         isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+         // Proprietário do sistema: todas as permissões, protegido contra alterações de terceiros
+         isSuperAdmin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       },
       { sequelize, modelName: 'User', tableName: 'users', underscored: true },
    );

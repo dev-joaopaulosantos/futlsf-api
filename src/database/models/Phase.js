@@ -1,6 +1,11 @@
 'use strict';
 const { Model } = require('sequelize');
 
+/*
+ * Model Phase — representa a tabela `phases` (as fases de um campeonato, ex.:
+ * "Fase de grupos", "Semifinal"). O campo `type` define o formato: LEAGUE
+ * (pontos corridos) ou KNOCKOUT (mata-mata); `order` define a sequência das fases.
+ */
 module.exports = (sequelize, DataTypes) => {
    class Phase extends Model {
       static associate(models) {

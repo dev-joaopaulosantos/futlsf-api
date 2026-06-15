@@ -1,6 +1,11 @@
 'use strict';
 const { Model } = require('sequelize');
 
+/*
+ * Model Team — representa a tabela `teams` (os times). Pertence a um usuário
+ * (dono), pode participar de vários campeonatos (N:M) e aparece em partidas como
+ * mandante (home) ou visitante (away).
+ */
 module.exports = (sequelize, DataTypes) => {
    class Team extends Model {
       static associate(models) {

@@ -1,6 +1,15 @@
 'use strict';
 const { Model } = require('sequelize');
 
+/*
+ * Model TournamentTeam — TABELA PIVÔ (ou "de junção") entre campeonatos e times.
+ *
+ * POR QUE EXISTE: a relação entre Tournament e Team é N:M (muitos-para-muitos):
+ * um campeonato tem vários times e um time pode estar em vários campeonatos.
+ * Bancos relacionais não guardam N:M direto numa coluna; resolvemos com uma
+ * tabela no meio, onde cada linha representa "este time participa deste
+ * campeonato". Aqui ela também guarda `groupId` (em qual grupo o time ficou).
+ */
 module.exports = (sequelize, DataTypes) => {
    class TournamentTeam extends Model {
       static associate(models) {

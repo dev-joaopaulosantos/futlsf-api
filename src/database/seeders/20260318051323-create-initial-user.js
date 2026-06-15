@@ -9,7 +9,11 @@ module.exports = {
             {
                name: 'Administrador',
                email: 'admin@futlsf.com',
-               password: '$2b$10$q0TXGCnqid7zXLL.9dSMFOQseCs.FGvDn7MNkZ9P5dd2Qi/EdFnB6',
+               password: '$2b$10$q0TXGCnqid7zXLL.9dSMFOQseCs.FGvDn7MNkZ9P5dd2Qi/EdFnB6', //admin123 - ⚠️ Trocar via painel admin após o primeiro deploy em produção.
+               role: 'admin',
+               is_super_admin: true,
+               created_at: new Date(),
+               updated_at: new Date(),
             },
          ],
          {},
